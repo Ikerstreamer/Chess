@@ -55,6 +55,7 @@ class ChessPiece {
   }
 
   moveTo(x, y) {
+    this._turns++;
     this._x = x;
     this._y = y;
   }

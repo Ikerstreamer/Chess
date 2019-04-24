@@ -57,32 +57,74 @@ class Engine {
     king.moveTo(king.pos.x + 2 * dir, king.pos.y);
   }
 
-  _calculateMoves(moves, side, king, ignore) {
+  _mapActiveMove(piece) {
+    let moves;
+    if (piece.name === "King") {
+      moves = this._calculatePossibleCastle(piece.side).concat(this._calculateMoves(piece).filter((elem) => {
+        return !Game.isInCheck(piece.side, elem.x, elem.y);
+      }));
+    } else moves = this._calculateMoves(piece);
+    moves = moves.filter((elem) => {
+      return !Game.isInCheck(piece.side, false, false, [piece], [elem]);
+    });
+    return moves;
+  }
+
+  _mapActiveCapture(piece) {
+    let captures;
+    if (piece.name === "King") {
+      captures = this._calculateCaptures(piece).filter((elem) => {
+        return !Game.isInCheck(piece.side, elem.x, elem.y);
+      });
+    } else captures = this._calculateCaptures(piece);
+    captures = captures.filter((elem) => {
+      return !Game.isInCheck(piece.side, false, false, [piece], [elem]);
+    });
+    return captures;
+  }
+
+  _calculateMoves(piece, ignore, add) {
+    const moves = piece.moves;
+    if (ignore === undefined) ignore = [];
+    if (add === undefined) add = [];
     let movesOut = [];
-    if (king) movesOut = this._calculatePossibleCastle(side);
     for (let i = 0; i < moves.length; i++) {
       if (moves[i] instanceof Array) {
         const stack = moves[i].filter((elem) => {
           return elem.y <= 8 && elem.y >= 1 && elem.x >= 1 && elem.x <= 8;
         });
         let end = stack.findIndex((elem) => {
-          let kingCheck = ignore && Game.pieceAt(elem.x, elem.y).name === "King" && Game.pieceAt(elem.x, elem.y).side !== side;
-          return Game.pieceAt(elem.x, elem.y).active && !kingCheck;
+          const canBeIgnored = ignore.find((elem2) => {
+            return elem2 === Game.pieceAt(elem.x, elem.y);
+          });
+          const isAddedPiece = add.find((elem2) => {
+            return elem2.x === elem.x && elem2.y === elem.y;
+          });
+          return (!canBeIgnored && Game.pieceAt(elem.x, elem.y).active) || isAddedPiece;
         });
         if (end === -1) end = stack.length;
         movesOut = movesOut.concat(stack.slice(0, end));
       } else {
-        const onBoard = moves[i].y <= 8 && moves[i].y >= 1 && moves[i].x <= 8 && moves[i].x >= 1;
-        if (onBoard && !Game.pieceAt(moves[i].x, moves[i].y).active) {
-          if ((king && Game.isInCheck(side, moves[i].x, moves[i].y))) continue;
-          movesOut.push(moves[i]);
+        if (!(moves[i].y <= 8 && moves[i].y >= 1 && moves[i].x <= 8 && moves[i].x >= 1)) continue;
+        if (!ignore.find((elem) => {
+            return elem === Game.pieceAt(moves[i].x, moves[i].y);
+          })) {
+          if (Game.pieceAt(moves[i].x, moves[i].y).active) continue;
+          if (add.find((elem) => {
+              return elem.x === moves[i].x && elem.y === moves[i].y;
+            })) continue;
         }
+        movesOut.push(moves[i]);
       }
     }
     return movesOut;
   }
 
-  _calculateCaptures(captures, side, king) {
+  _calculateCaptures(piece, ignore, add) {
+    const captures = piece.captures;
+    const side = piece.side;
+    if (ignore === undefined) ignore = [];
+    if (add === undefined) add = [];
     let capturesOut = [];
     for (let i = 0; i < captures.length; i++) {
       if (captures[i] instanceof Array) {
@@ -90,33 +132,55 @@ class Engine {
           return elem.y <= 8 && elem.y >= 1 && elem.x >= 1 && elem.x <= 8;
         });
         const capture = stack.find((elem) => {
-          return Game.pieceAt(elem.x, elem.y).active;
+          const canBeIgnored = ignore && ignore.find((elem2) => {
+            return elem2 === Game.pieceAt(elem.x, elem.y);
+          });
+          const isAddedPiece = add.find((elem2) => {
+            return elem2.x === elem.x && elem2.y === elem.y;
+          });
+          return (!canBeIgnored && Game.pieceAt(elem.x, elem.y).active) || isAddedPiece;
         });
         if (capture !== undefined && Game.pieceAt(capture.x, capture.y).side !== side) {
           capturesOut.push(capture);
         }
       } else {
-        const onBoard = captures[i].y <= 8 && captures[i].y >= 1 && captures[i].x >= 1 && captures[i].x <= 8;
-        if (onBoard && Game.pieceAt(captures[i].x, captures[i].y).active && Game.pieceAt(captures[i].x, captures[i].y).side !== side) {
-          if (king && Game.isInCheck(side, captures[i].x, captures[i].y)) continue;
-          capturesOut.push(captures[i]);
-          capturesOut[capturesOut.length - 1].target = Game.pieceAt(captures[i].x, captures[i].y);
+        if (!(captures[i].y <= 8 && captures[i].y >= 1 && captures[i].x >= 1 && captures[i].x <= 8)) continue;
+        if (Game.pieceAt(captures[i].x, captures[i].y).side === side) continue;
+        if (!ignore.find((elem) => {
+            return elem === Game.pieceAt(captures[i].x, captures[i].y);
+          })) {
+          if (!Game.pieceAt(captures[i].x, captures[i].y).active) continue;
+          if (!add.find((elem) => {
+              return elem.x === captures[i].x && elem.y === captures[i].y;
+            })) continue;
         }
+        capturesOut.push(captures[i]);
+        capturesOut[capturesOut.length - 1].target = Game.pieceAt(captures[i].x, captures[i].y);
       }
     }
     return capturesOut;
   }
 
-  possibleMovesCaptures(moves, captures, side, king, ignore) {
-    return this._calculateMoves(moves, side, king, ignore).concat(this._calculateCaptures(captures, side, king));
+  activeMovesCaptures(piece) {
+    return this._mapActiveMove(piece).concat(this._mapActiveCapture(piece));
   }
 
-  piecesThatCanCheck(pieces, x, y) {
+  possibleMovesCaptures(piece, ignore, add) {
+    return this._calculateMoves(piece, ignore, add).concat(this._calculateCaptures(piece, ignore, add));
+  }
+
+  piecesThatCanCheck(pieces, x, y, ignore, add) {
     let moves = [];
     for (let i = 0; i < pieces.length; i++) {
-      moves.push(this.possibleMovesCaptures(pieces[i].moves, pieces[i].captures, pieces[i].side, false, true).filter((elem) => {
-        return elem.x === x && elem.y === y;
-      }));
+      if (pieces[i].name === "Pawn") {
+        moves.push(pieces[i].captures.filter((elem) => {
+          return elem.x === x && elem.y === y;
+        }));
+      } else {
+        moves.push(this.possibleMovesCaptures(pieces[i], ignore, add).filter((elem) => {
+          return elem.x === x && elem.y === y;
+        }));
+      }
     }
     return moves.map((elem) => {
       return elem.length > 0;
@@ -130,7 +194,7 @@ class Engine {
     this._clearCaptures();
   }
 
-  startMoveCommand(piece, moves, captures) {
+  startMoveCommand(piece) {
     if (this._moveInProgress) {
       this._moveInProgress = false;
       this._movingPiece = null;
@@ -138,14 +202,15 @@ class Engine {
       this._moveInProgress = true;
       this._movingPiece = piece;
     }
-    this._possibleMoves = this._calculateMoves(moves, piece.side, piece.name === "King");
-    this._possibleCaptures = this._calculateCaptures(captures, piece.side, piece.name === "King");
+    this._possibleMoves = this._mapActiveMove(piece);
+    this._possibleCaptures = this._mapActiveCapture(piece);
     return this._moveInProgress;
   }
 
   completeMoveCommand(x, y) {
     if (this._movingPiece.name === "King" && Game.pieceAt(x, y).name === "Rook" && Game.pieceAt(x, y).side === this._movingPiece.side) this._completeCastle(x, y);
     else this._movingPiece.moveTo(x, y);
+
     return this._movingPiece;
   }
 }
