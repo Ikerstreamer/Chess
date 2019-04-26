@@ -35,6 +35,10 @@ class Board {
     return obj;
   }
 
+  spawnPieceAt(name, x, y, side) {
+    return new PIECES[name](x, y, side);
+  }
+
   _createCellAt(x, y) {
     if (y === 7) {
       //spawns black pawns

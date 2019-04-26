@@ -45,6 +45,10 @@ class Engine {
     });
   }
 
+  _canPromotePawn(piece) {
+    return piece.side === "white" ? piece.pos.y === 8 : piece.pos.y === 1;
+  }
+
   _completeCastle(x, y) {
     const king = this._movingPiece;
     const dir = (x - king.pos.x) / Math.abs(x - king.pos.x);
@@ -61,12 +65,17 @@ class Engine {
     let moves;
     if (piece.name === "King") {
       moves = this._calculatePossibleCastle(piece.side).concat(this._calculateMoves(piece).filter((elem) => {
-        return !Game.isInCheck(piece.side, elem.x, elem.y);
+        return !Game.isInCheck(piece.side, elem.x, elem.y, [piece], [{
+          x: elem.x,
+          y: elem.y
+        }]);
       }));
-    } else moves = this._calculateMoves(piece);
-    moves = moves.filter((elem) => {
-      return !Game.isInCheck(piece.side, false, false, [piece], [elem]);
-    });
+    } else {
+      moves = this._calculateMoves(piece);
+      moves = moves.filter((elem) => {
+        return !Game.isInCheck(piece.side, false, false, [piece], [elem]);
+      });
+    }
     return moves;
   }
 
@@ -76,10 +85,12 @@ class Engine {
       captures = this._calculateCaptures(piece).filter((elem) => {
         return !Game.isInCheck(piece.side, elem.x, elem.y);
       });
-    } else captures = this._calculateCaptures(piece);
-    captures = captures.filter((elem) => {
-      return !Game.isInCheck(piece.side, false, false, [piece], [elem]);
-    });
+    } else {
+      captures = this._calculateCaptures(piece);
+      captures = captures.filter((elem) => {
+        return !Game.isInCheck(piece.side, false, false, [piece], [elem]);
+      });
+    }
     return captures;
   }
 
@@ -149,10 +160,11 @@ class Engine {
         if (!ignore.find((elem) => {
             return elem === Game.pieceAt(captures[i].x, captures[i].y);
           })) {
-          if (!Game.pieceAt(captures[i].x, captures[i].y).active) continue;
-          if (!add.find((elem) => {
-              return elem.x === captures[i].x && elem.y === captures[i].y;
-            })) continue;
+          let addedPiece = add.find((elem) => {
+            return elem.x === captures[i].x && elem.y === captures[i].y;
+          })
+          if (!Game.pieceAt(captures[i].x, captures[i].y).active && !addedPiece) continue;
+
         }
         capturesOut.push(captures[i]);
         capturesOut[capturesOut.length - 1].target = Game.pieceAt(captures[i].x, captures[i].y);
@@ -173,12 +185,12 @@ class Engine {
     let moves = [];
     for (let i = 0; i < pieces.length; i++) {
       if (pieces[i].name === "Pawn") {
-        moves.push(pieces[i].captures.filter((elem) => {
+        moves.push(this._calculateCaptures(pieces[i], ignore, add).filter((elem) => {
           return elem.x === x && elem.y === y;
         }));
       } else {
         moves.push(this.possibleMovesCaptures(pieces[i], ignore, add).filter((elem) => {
-          return elem.x === x && elem.y === y;
+          return elem.x === x && elem.y === y && !(pieces[i].name === "King" && !Game.pieceAt(x, y).active);
         }));
       }
     }
@@ -208,9 +220,17 @@ class Engine {
   }
 
   completeMoveCommand(x, y) {
-    if (this._movingPiece.name === "King" && Game.pieceAt(x, y).name === "Rook" && Game.pieceAt(x, y).side === this._movingPiece.side) this._completeCastle(x, y);
-    else this._movingPiece.moveTo(x, y);
-
+    if (this._movingPiece.name === "King") {
+      if (Game.pieceAt(x, y).name === "Rook" && Game.pieceAt(x, y).side === this._movingPiece.side) {
+        this._completeCastle(x, y);
+      }
+    } else {
+      if (Game.pieceAt(x, y).active) Game.pieceAt(x, y).die();
+    }
+    this._movingPiece.moveTo(x, y);
+    if (this._movingPiece.name === "Pawn" && this._canPromotePawn(this._movingPiece)) {
+      this._movingPiece = Game.spawnPiece("Queen", x, y, this._movingPiece.side);
+    }
     return this._movingPiece;
   }
 }

@@ -32,6 +32,10 @@ class GameClass {
     this.board.highlightCheck(side, state);
   }
 
+  spawnPiece(name, x, y, side) {
+    return this.board.spawnPieceAt(name, x, y, side);
+  }
+
   nextTurn() {
     if (this.turn === "white") this.turn = "black";
     else this.turn = "white";
@@ -122,7 +126,6 @@ class GameClass {
   }
 
   completeMove(x, y) {
-    if (this.pieceAt(x, y).active) this.pieceAt(x, y).die();
     let oldPos = this.engine.piece.pos;
     this.highlightAllMoves();
     this.updatePosOf(this.engine.completeMoveCommand(x, y), oldPos);
@@ -135,7 +138,7 @@ class GameClass {
     if (this.isInCheck(this.turn)) {
       if (this.isCheckMate(this.turn)) {
         console.log(this.turn.slice(0, 1).toUpperCase() + this.turn.slice(1) + " has been checkmated!");
-        setTimeout(this.init, 5000);
+        setTimeout(init, 5000);
       }
       this.checkedPlayer = this.turn;
       this.highlightKing(this.turn, true);
