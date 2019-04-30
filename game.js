@@ -1,5 +1,7 @@
 class GameClass {
   constructor() {
+    // contructor for GameClass which defines all its private variables
+    // creates new Engine and Board classes which can be referenced
     this.board = new Board();
     this.engine = new Engine();
     this.turn = "white";
@@ -7,9 +9,9 @@ class GameClass {
     this.checkedPlayer = null;
   }
 
+  // start: utility functions referencing functions in sub class (board, engine)
   init() {
     this.board.init();
-    //this.engine.init();
   }
 
   updatePosOf(piece, oldPos) {
@@ -36,12 +38,16 @@ class GameClass {
     return this.board.spawnPieceAt(name, x, y, side);
   }
 
-  nextTurn() {
-    if (this.turn === "white") this.turn = "black";
-    else this.turn = "white";
-    this.turnsTaken++;
+  allPieces(side) {
+    return this.board.allPieces(side);
   }
 
+  findKing(side) {
+    return this.board.findKing(side);
+  }
+  //end: utility functions
+
+  // highlights all legal moves that the player can make with the selected piece
   highlightAllMoves() {
     let all = this.engine.moves.concat(this.engine.captures);
     for (let i = 0; i < all.length; i++) {
@@ -50,21 +56,28 @@ class GameClass {
     }
   }
 
-  allPieces(side) {
-    return this.board.allPieces(side);
+  // increments the turn order by 1 swaping the active player (black, white)
+  nextTurn() {
+    if (this.turn === "white") this.turn = "black";
+    else this.turn = "white";
+    this.turnsTaken++;
   }
 
-  findKing(side) {
-    return this.board.findKing(side);
-  }
-
-  isInCheck(side, altx, alty, ignore, positionsToAdd) {
+  // returns wheter or not a given side is in check at postion [altx, alty]
+  // or the side's King's current position if left undefined or false
+  isInCheck(side, altx, alty, ignore, add) {
     const pos = this.findKing(side).pos;
     let piecesToIgnore = [this.findKing(side)];
-    if (ignore) piecesToIgnore = piecesToIgnore.concat(ignore);
+    let positionsToAdd = [];
+    if (add && add.length > 0) positionsToAdd = positionsToAdd.concat(add);
+    if (ignore && ignore.length > 0) piecesToIgnore = piecesToIgnore.concat(ignore);
     if (altx !== undefined && alty !== undefined && altx !== false && alty !== false) {
       pos.x = altx;
       pos.y = alty;
+      positionsToAdd.push({
+        x: altx,
+        y: alty
+      });
     }
     const checkSide = side === "white" ? "black" : "white";
     const pieceList = this.allPieces(checkSide);
@@ -72,6 +85,7 @@ class GameClass {
     return canCheck > -1;
   }
 
+  // returns whether the king of a given side is in checkmate
   isCheckMate(side) {
     const king = this.findKing(side);
     let basicCheck = this.engine.activeMovesCaptures(king).length === 0 && this.isInCheck(side);
@@ -96,7 +110,6 @@ class GameClass {
           }
           return false;
         });
-        console.log(stack, stackId);
         if (!stack || stackId === 0) return true;
         for (let j = 0; j < stackId; j++) {
           if (this.isInCheck(otherSide, stack[j].x, stack[j].y)) return false;
@@ -107,6 +120,8 @@ class GameClass {
     return true;
   }
 
+  // starts the chain of functions requirred to initialize a move action
+  // once an active piece is clicke. Uses references to the engine class
   mapMoves(piece) {
     if (piece.side === this.turn) {
       if (piece === this.engine.piece) {
@@ -125,6 +140,8 @@ class GameClass {
     this.draw();
   }
 
+  // completes the initialized move action once the destination is clicked.
+  // once again uses references to the engine class
   completeMove(x, y) {
     let oldPos = this.engine.piece.pos;
     this.highlightAllMoves();
@@ -147,6 +164,7 @@ class GameClass {
   }
 }
 
+// initializes the game once the webpage has loaded
 function init() {
   window.Game = new GameClass();
   Game.init();

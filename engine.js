@@ -1,11 +1,12 @@
 class Engine {
   constructor() {
+    // constructs the class, defining all its private variables
     this._movingPiece = null;
     this._moveInProgress = false;
     this._possibleMoves = [];
     this._possibleCaptures = [];
   }
-
+  // all public getters for the engine class
   get moves() {
     return this._possibleMoves;
   }
@@ -18,14 +19,16 @@ class Engine {
     return this._possibleCaptures;
   }
 
+  // private class function that clears all moves
   _clearMoves() {
     this._possibleMoves = [];
   }
-
+  // private class function that clears all captures
   _clearCaptures() {
     this._possibleCaptures = [];
   }
 
+  // private class function which checks if selected King can castle with any of its own rooks
   _calculatePossibleCastle(side) {
     const king = Game.findKing(side);
     if (king.hasMoved || Game.isInCheck(side)) return [];
@@ -49,6 +52,7 @@ class Engine {
     return piece.side === "white" ? piece.pos.y === 8 : piece.pos.y === 1;
   }
 
+  // private class function which makes the moves requirred to finish the castle kingside action
   _completeCastle(x, y) {
     const king = this._movingPiece;
     const dir = (x - king.pos.x) / Math.abs(x - king.pos.x);
@@ -60,7 +64,8 @@ class Engine {
     });
     king.moveTo(king.pos.x + 2 * dir, king.pos.y);
   }
-
+  // private class function which determines all moves a given piece can legally make if it were
+  // to be moved by the user
   _mapActiveMove(piece) {
     let moves;
     if (piece.name === "King") {
@@ -79,6 +84,8 @@ class Engine {
     return moves;
   }
 
+  // private class function which determines all captures a given piece can legally make if it were
+  // to be moved by the user
   _mapActiveCapture(piece) {
     let captures;
     if (piece.name === "King") {
@@ -94,6 +101,7 @@ class Engine {
     return captures;
   }
 
+  // private class function which determines all moves a given piece can legally make.
   _calculateMoves(piece, ignore, add) {
     const moves = piece.moves;
     if (ignore === undefined) ignore = [];
@@ -131,6 +139,7 @@ class Engine {
     return movesOut;
   }
 
+  // private class function which determines all captures a given piece can legally make.
   _calculateCaptures(piece, ignore, add) {
     const captures = piece.captures;
     const side = piece.side;
@@ -162,9 +171,8 @@ class Engine {
           })) {
           let addedPiece = add.find((elem) => {
             return elem.x === captures[i].x && elem.y === captures[i].y;
-          })
+          });
           if (!Game.pieceAt(captures[i].x, captures[i].y).active && !addedPiece) continue;
-
         }
         capturesOut.push(captures[i]);
         capturesOut[capturesOut.length - 1].target = Game.pieceAt(captures[i].x, captures[i].y);
@@ -173,14 +181,19 @@ class Engine {
     return capturesOut;
   }
 
+  // returns all possible moves and captures for a given piece as if the piece is activly being 
+  // moved
   activeMovesCaptures(piece) {
     return this._mapActiveMove(piece).concat(this._mapActiveCapture(piece));
   }
 
+  // returns all possible moves and captures for a given piece.
   possibleMovesCaptures(piece, ignore, add) {
     return this._calculateMoves(piece, ignore, add).concat(this._calculateCaptures(piece, ignore, add));
   }
 
+  // returns an array mirroring the input array, giving which pieces can threaten the position
+  // specified by x, y.
   piecesThatCanCheck(pieces, x, y, ignore, add) {
     let moves = [];
     for (let i = 0; i < pieces.length; i++) {
@@ -199,6 +212,7 @@ class Engine {
     });
   }
 
+  // clears the currently moving piece
   clearMoveCommand() {
     this._moveInProgress = false;
     this._movingPiece = null;
@@ -206,6 +220,7 @@ class Engine {
     this._clearCaptures();
   }
 
+  // sets a piece to be moved and calls sub functions to find all possible moves
   startMoveCommand(piece) {
     if (this._moveInProgress) {
       this._moveInProgress = false;
@@ -219,6 +234,7 @@ class Engine {
     return this._moveInProgress;
   }
 
+  // completes the movement for the piece currently being moved
   completeMoveCommand(x, y) {
     if (this._movingPiece.name === "King") {
       if (Game.pieceAt(x, y).name === "Rook" && Game.pieceAt(x, y).side === this._movingPiece.side) {

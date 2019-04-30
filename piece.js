@@ -1,5 +1,6 @@
 class ChessPiece {
   constructor(name, posx, posy, forward, color) {
+    // contructor for the basic chess piece defining all private variable which all chess pieces should own.
     this._name = name;
     this._x = posx;
     this._y = posy;
@@ -10,6 +11,7 @@ class ChessPiece {
     this._highlight = false;
   }
 
+  // public getters for all chess pieces.
   get name() {
     return this._name;
   }
@@ -49,24 +51,27 @@ class ChessPiece {
     return false;
   }
 
+  // click function called when this piece is clicked on the board.
   click() {
     console.log(this);
     Game.mapMoves(this, this.moves, this.captures);
   }
 
+  // used to update the position of the piece.
   moveTo(x, y) {
     this._turns++;
     this._x = x;
     this._y = y;
   }
 
+  // ddisables the piece so it is no longer drawn.
   die() {
     this._alive = false;
   }
 
 }
 
-
+// Definition of the Pawn class as it extends the ChessPiece class
 class Pawn extends ChessPiece {
   constructor(posx, posy, side) {
     let dir = 1;
@@ -114,6 +119,7 @@ class Pawn extends ChessPiece {
 
 }
 
+// Definition of the Knight class as it extends the ChessPiece class
 class Knight extends ChessPiece {
   constructor(posx, posy, side) {
     let dir = 1;
@@ -155,6 +161,7 @@ class Knight extends ChessPiece {
   }
 }
 
+// Definition of the Rook class as it extends the ChessPiece class
 class Rook extends ChessPiece {
   constructor(posx, posy, side) {
     let dir = 1;
@@ -201,6 +208,7 @@ class Rook extends ChessPiece {
   }
 }
 
+// Definition of the Bishop class as it extends the ChessPiece class
 class Bishop extends ChessPiece {
   constructor(posx, posy, side) {
     let dir = 1;
@@ -251,6 +259,7 @@ class Bishop extends ChessPiece {
   }
 }
 
+// Definition of the Queen class as it extends the ChessPiece class
 class Queen extends ChessPiece {
   constructor(posx, posy, side) {
     let dir = 1;
@@ -314,6 +323,7 @@ class Queen extends ChessPiece {
 
 }
 
+// Definition of the King class as it extends the ChessPiece class
 class King extends ChessPiece {
   constructor(posx, posy, side) {
     let dir = 1;
@@ -364,6 +374,7 @@ class King extends ChessPiece {
   }
 }
 
+// Reference to all piece classes by name
 const PIECES = {
   'Pawn': Pawn,
   'Knight': Knight,
